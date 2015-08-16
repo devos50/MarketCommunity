@@ -1,8 +1,9 @@
-import logging, signal
+import logging, signal, threading
 from twisted.internet import reactor
 from twisted.python.log import addObserver
 from dispersy.dispersy import Dispersy
 from dispersy.endpoint import StandaloneEndpoint
+from marketcommunity.community import MarketCommunity
 
 logging.basicConfig(format="%(asctime)-15s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -36,6 +37,12 @@ class DispersyMarket(Dispersy):
         self.market_community = MarketCommunity.init_community(self, master, self.me)
         self.attach_community(self.market_community)
 
+    def start_reactor(self):
+        logger.info('Starting Twisted Reactor')
+        reactor.exitCode = 0
+        reactor.callWhenRunning(self.init)
+        reactor.run(installSignalHandlers=0)
+
     def init(self):
         self.start(autoload_discovery=True)
         logger.info('Started Dispersy market instance')
@@ -52,11 +59,14 @@ class DispersyMarket(Dispersy):
         from dispersy.util import unhandled_error_observer
         addObserver(unhandled_error_observer)
 
-        logger.info('Starting Twisted Reactor')
-        reactor.exitCode = 0
-        reactor.callWhenRunning(self.init)
-        reactor.run()
+        threading.Thread(target=self.start_reactor, args=()).start()
 
 if __name__ == "__main__":
     DispersyMarket()
+
+    while True:
+        inp = raw_input()
+        if inp == "print":
+            print "TODO: Print all orders"
+
     exit(reactor.exitCode)
