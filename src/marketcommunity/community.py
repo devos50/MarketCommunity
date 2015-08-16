@@ -7,6 +7,7 @@ from dispersy.resolution import PublicResolution
 from dispersy.distribution import FullSyncDistribution
 from dispersy.destination import CommunityDestination
 from payload import AskPayload
+from conversion import Conversion
 
 logging.basicConfig(format="%(asctime)-15s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ class MarketCommunity(Community):
         ]
 
     def initiate_conversions(self):
-        return [DefaultConversion(self)]
+        return [DefaultConversion(self), Conversion(self)]
 
     def check_message(self, messages):
         for message in messages:
@@ -40,3 +41,11 @@ class MarketCommunity(Community):
 
     def on_ask(self, message):
         print "received ask message"
+
+    def send_ask(self):
+        print "sending ask"
+        meta = self.get_meta_message(u"create-ask")
+        message = meta.impl(authentication=(self.my_member,),
+                          distribution=(self.claim_global_time(),),
+                          payload=(unicode("hallo?"),))
+        self.dispersy.store_update_forward([message], True, True, True)

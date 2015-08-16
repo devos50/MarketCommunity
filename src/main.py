@@ -1,4 +1,4 @@
-import logging, signal, threading
+import logging, signal, threading, sys
 from twisted.internet import reactor
 from twisted.python.log import addObserver
 from dispersy.dispersy import Dispersy
@@ -45,13 +45,14 @@ class DispersyMarket(Dispersy):
 
     def init(self):
         self.start(autoload_discovery=True)
-        logger.info('Started Dispersy market instance')
+        logger.info('Started Dispersy market instance on port %d' % self.port)
         self.me = self.get_new_member()
 
         self.setup_communities()
 
-    def __init__(self):
-        super(DispersyMarket, self).__init__(StandaloneEndpoint(1234, '0.0.0.0'), u'../data', u'dispersy.db')
+    def __init__(self, port):
+        self.port = port
+        super(DispersyMarket, self).__init__(StandaloneEndpoint(port, '0.0.0.0'), u'../data_' + str(port), u'dispersy.db')
         self.statistics.enable_debug_statistics(True)
 
         self.bind_signals()
@@ -62,11 +63,13 @@ class DispersyMarket(Dispersy):
         threading.Thread(target=self.start_reactor, args=()).start()
 
 if __name__ == "__main__":
-    DispersyMarket()
+    dispersyMarket = DispersyMarket(port=int(sys.argv[1]))
 
     while True:
         inp = raw_input()
         if inp == "print":
             print "TODO: Print all orders"
+        elif inp == "ask":
+            dispersyMarket.market_community.send_ask()
 
     exit(reactor.exitCode)
