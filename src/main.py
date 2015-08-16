@@ -12,6 +12,26 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+class LineReader(basic.LineReceiver):
+    from os import linesep as delimiter
+
+    def connectionMade(self):
+        self.transport.write('>>> ')
+
+    def lineReceived(self, line):
+        parts = line.split(" ")
+        if len(parts) == 0:
+            print "Error, expected keyword"
+        if parts[0] == "print":
+            print dispersyMarket.market_community.order_book.get_orders_string()
+        elif parts[0] == "ask":
+            if len(parts) != 3:
+                print "Wrong input, expecting: ask [price] [quantity]"
+            else:
+                print "Sending ask to the community"
+                dispersyMarket.market_community.send_ask(parts[1], parts[2])
+        self.transport.write('>>> ')
+
 class DispersyMarket(Dispersy):
 
     def signal_handler(self, sig, frame):
@@ -60,26 +80,11 @@ class DispersyMarket(Dispersy):
         logger.info('Starting Twisted Reactor')
         reactor.exitCode = 0
         reactor.callWhenRunning(self.init)
-        stdio.StandardIO(Echo())
+        stdio.StandardIO(LineReader())
         reactor.run()
 
-
-class Echo(basic.LineReceiver):
-    from os import linesep as delimiter
-
-    def connectionMade(self):
-        self.transport.write('>>> ')
-
-    def lineReceived(self, line):
-        if line == "print":
-            print "TODO: Print all orders"
-        elif line == "ask":
-            print "SENDING ask"
-            dispersyMarket.market_community.send_ask()
-        self.transport.write('>>> ')
 
 if __name__ == "__main__":
     dispersyMarket = DispersyMarket(port=int(sys.argv[1]))
     dispersyMarket.dispersy_start()
-
     exit(reactor.exitCode)

@@ -1,4 +1,5 @@
 import logging
+import json
 from dispersy.community import Community
 from dispersy.conversion import DefaultConversion
 from dispersy.message import Message
@@ -8,6 +9,7 @@ from dispersy.distribution import FullSyncDistribution
 from dispersy.destination import CommunityDestination
 from payload import AskPayload
 from conversion import MarketConversion
+from orders.orderbook import Orderbook
 
 logging.basicConfig(format="%(asctime)-15s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -15,6 +17,8 @@ logger.setLevel(logging.DEBUG)
 
 
 class MarketCommunity(Community):
+
+    order_book = Orderbook()
 
     def initialize(self):
         super(MarketCommunity, self).initialize()
@@ -41,12 +45,15 @@ class MarketCommunity(Community):
 
     def on_ask(self, messages):
         for message in messages:
-            logger.info("received ask messages")
+            logger.info("received ask message: " + message.payload.text)
+            msg_json = json.loads(message.payload.text)
+            self.order_book.add_order('ask', msg_json)
 
-    def send_ask(self):
-        logger.info("sending ask")
+    def send_ask(self, price, quantity):
+        message_dict = { "price" : price, "quantity" : quantity }
+        logger.debug("sending ask")
         meta = self.get_meta_message(u"create-ask")
         message = meta.impl(authentication=(self.my_member,),
                           distribution=(self.claim_global_time(),),
-                          payload=(unicode("hallo?"),))
+                          payload=(unicode(json.dumps(message_dict)),))
         self.dispersy.store_update_forward([message], True, True, True)
