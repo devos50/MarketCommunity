@@ -4,10 +4,10 @@ from dispersy.conversion import BinaryConversion
 from dispersy.message import DropPacket
 
 
-class Conversion(BinaryConversion):
+class MarketConversion(BinaryConversion):
 
     def __init__(self, community):
-        super(Conversion, self).__init__(community, "\x02")
+        super(MarketConversion, self).__init__(community, "\x02")
         self.define_meta_message(chr(1), community.get_meta_message(u"create-ask"), self._encode_text, self._decode_text)
 
     def _encode_text(self, message):

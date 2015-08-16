@@ -1,5 +1,7 @@
 import logging, signal, threading, sys
-from twisted.internet import reactor
+from twisted.internet import reactor, task
+from twisted.internet import stdio
+from twisted.protocols import basic
 from twisted.python.log import addObserver
 from dispersy.dispersy import Dispersy
 from dispersy.endpoint import StandaloneEndpoint
@@ -37,12 +39,6 @@ class DispersyMarket(Dispersy):
         self.market_community = MarketCommunity.init_community(self, master, self.me)
         self.attach_community(self.market_community)
 
-    def start_reactor(self):
-        logger.info('Starting Twisted Reactor')
-        reactor.exitCode = 0
-        reactor.callWhenRunning(self.init)
-        reactor.run(installSignalHandlers=0)
-
     def init(self):
         self.start(autoload_discovery=True)
         logger.info('Started Dispersy market instance on port %d' % self.port)
@@ -60,16 +56,30 @@ class DispersyMarket(Dispersy):
         from dispersy.util import unhandled_error_observer
         addObserver(unhandled_error_observer)
 
-        threading.Thread(target=self.start_reactor, args=()).start()
+    def dispersy_start(self):
+        logger.info('Starting Twisted Reactor')
+        reactor.exitCode = 0
+        reactor.callWhenRunning(self.init)
+        stdio.StandardIO(Echo())
+        reactor.run()
+
+
+class Echo(basic.LineReceiver):
+    from os import linesep as delimiter
+
+    def connectionMade(self):
+        self.transport.write('>>> ')
+
+    def lineReceived(self, line):
+        if line == "print":
+            print "TODO: Print all orders"
+        elif line == "ask":
+            print "SENDING ask"
+            dispersyMarket.market_community.send_ask()
+        self.transport.write('>>> ')
 
 if __name__ == "__main__":
     dispersyMarket = DispersyMarket(port=int(sys.argv[1]))
-
-    while True:
-        inp = raw_input()
-        if inp == "print":
-            print "TODO: Print all orders"
-        elif inp == "ask":
-            dispersyMarket.market_community.send_ask()
+    dispersyMarket.dispersy_start()
 
     exit(reactor.exitCode)
